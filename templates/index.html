@@ -1,55 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
   <meta charset="utf-8" />
-  <title>Route-finding App</title>
+  <title>Ứng dụng tìm đường thông minh</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    #map { height: 600px; width: 100%; margin-top: 10px; }
+    .control-panel {
+      padding: 10px; background: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
+    }
+    button, select, input {
+      padding: 6px 10px; border-radius: 5px; border: 1px solid #ccc;
+    }
+  </style>
 </head>
 <body>
-  <button style="position: fixed; top: 10px; left: 10px; height: 30px; z-index: 1001" onclick="toggleSidebar()">Admin Mode</button>
-
-  <div id="sidebar">
-    <hr style="margin: 20px 0; border: none" />
-
-    <input style="width: 200px; height: 20px" type="text" id="streetInput" placeholder="Nhập tên đường" />
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <label><input type="radio" name="action" value="change"> Tắc đường</label><br>
-    <label for="volume">Mức độ tắc:</label><br>
-    <input type="range" id="level" min="1" max="3" value="1">
-    <span id="levelValue">1</span>
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <label><input type="radio" name="action" value="ban"> Cấm đường</label><br>
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <button style="width: 100px; display: block; margin: 0 auto" onclick="changeWeight()">Xác nhận</button>
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <button style="width: 100px; display: block; margin: 0 auto" onclick="resetGraph()">Reset</button>
+  <div class="control-panel">
+    <input id="startPlace" placeholder="Điểm bắt đầu" />
+    <input id="endPlace" placeholder="Điểm kết thúc" />
+    <select id="vehicleSelect">
+      <option value="car">🚗 Ô tô</option>
+      <option value="motorbike">🏍 Xe máy</option>
+      <option value="bicycle">🚲 Xe đạp</option>
+      <option value="foot">🚶‍♂️ Đi bộ</option>
+    </select>
+    <button id="findByTextBtn">Tìm (text)</button>
+    <button id="findRouteBtn">Tìm (click)</button>
+    <button id="banRouteBtn">Cấm đường</button>
+    <button id="changeWeightBtn">Tắc đường</button>
+    <button id="resetBtn">Reset</button>
   </div>
 
-  <div id="main">
-    <div style="height: 500px; margin-top: 20px" id="map"></div>
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <div style="width: fit-content; margin: 0 auto; text-align: center;">
-      <div style="display: flex; gap: 50px; justify-content: center;">
-          <input style="width: 200px" type="text" id="placeInput1" placeholder="Nhập điểm xuất phát" />
-          <input style="width: 200px" type="text" id="placeInput2" placeholder="Nhập điểm đến" />
-      </div>
-      
-      <hr style="margin: 10px 0; border: none" />
-
-      <button style="width: 100px; display: block; margin: 0 auto" onclick="findRoute()">Tìm</button>
-    </div>
-  </div>
+  <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
   <script src="/static/scripts.js"></script>

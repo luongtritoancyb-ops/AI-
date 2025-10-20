@@ -1,3 +1,28 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+}
+
+#map {
+  height: 500px;
+  width: 100%;
+}
+
+#adminBtn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1001;
+  height: 30px;
+  padding: 5px 10px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 #sidebar {
   position: fixed;
   top: 0;
@@ -8,21 +33,52 @@
   color: white;
   padding: 20px;
   box-sizing: border-box;
-  transition: transform 0.3s ease;
-  transform: translateX(0);
+  transition: 0.3s;
   z-index: 1000;
 }
 
 #sidebar.appear {
-  transform: translateX(100%);
+  left: 0;
+}
+
+#sidebar input,
+#sidebar button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+.section {
+  margin-top: 15px;
 }
 
 #main {
   margin-left: 0;
   padding: 20px;
-  transition: margin-left 0.3s ease;
+  transition: margin-left 0.3s;
 }
 
 #main.minimize {
   margin-left: 250px;
+}
+
+#controls {
+  text-align: center;
+  margin-top: 20px;
+}
+
+#controls input {
+  width: 200px;
+  padding: 5px;
+  margin: 5px;
+}
+
+#controls button {
+  padding: 5px 15px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
