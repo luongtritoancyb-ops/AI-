@@ -1,5 +1,5 @@
 // === Khởi tạo bản đồ ===
-let map = L.map("map").setView([21.0362, 105.8342], 15);
+let map = L.map("map").setView([21.0055, 105.8430], 14);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);

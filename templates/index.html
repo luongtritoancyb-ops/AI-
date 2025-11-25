@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<<<<<<< HEAD
 <html lang="vi">
 <head>
   <meta charset="utf-8" />
@@ -37,5 +38,44 @@
 
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
   <script src="/static/scripts.js"></script>
+=======
+<html>
+<head>
+<meta charset="utf-8">
+<title>Tìm đường A*</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<button id="adminBtn">☰</button>
+<div id="sidebar">
+<h3>Chức năng</h3>
+<input id="startPlace" placeholder="Điểm bắt đầu">
+<input id="endPlace" placeholder="Điểm kết thúc">
+<select id="vehicleSelect">
+<option value="car">Ô tô</option>
+<option value="motorbike">Xe máy</option>
+<option value="bicycle">Xe đạp</option>
+<option value="foot">Đi bộ</option>
+</select>
+<select id="modeSelect">
+<option value="fastest">Nhanh nhất</option>
+<option value="shortest">Ngắn nhất</option>
+</select>
+<button id="findByTextBtn">Tìm đường (Text)</button>
+<div class="section">
+<button id="banRouteBtn">Cấm đường</button>
+<button id="changeWeightBtn">Tắc đường</button>
+<button id="resetBtn">Reset</button>
+</div>
+</div>
+<div id="main">
+<div id="map"></div>
+<p id="travelTime"></p>
+<center><button id="findRouteBtn">Tìm đường (Click)</button></center>
+</div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="{{ url_for('static','main.js') }}"></script>
+>>>>>>> 455ef6a58c57ceb283d264c610854ae1b2ab85b3
 </body>
 </html>
