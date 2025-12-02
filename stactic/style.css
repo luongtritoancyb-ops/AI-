@@ -1,9 +1,0 @@
-body{margin:0;font-family:Arial,sans-serif;background:#f4f4f4}
-#map{height:500px;width:100%}
-#adminBtn{position:fixed;top:10px;left:10px;z-index:1001;height:30px;padding:5px 10px;background:#1976d2;color:white;border:none;border-radius:4px;cursor:pointer}
-#sidebar{position:fixed;top:0;left:-250px;width:250px;height:100%;background:#333;color:white;padding:20px;box-sizing:border-box;transition:.3s;z-index:1000}
-#sidebar.appear{left:0}
-#sidebar input,#sidebar select,#sidebar button{width:100%;margin-top:10px;padding:5px;border-radius:4px}
-.section{margin-top:15px}
-#main{padding:20px}
-#travelTime{font-size:18px;font-weight:bold;margin-top:10px}

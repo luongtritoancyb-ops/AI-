@@ -3,12 +3,13 @@ import osmnx as ox
 import networkx as nx
 from shapely.ops import unary_union
 import math
+import traceback
 
 app = Flask(__name__)
 
-
-# 🔹 1. TẢI DỮ LIỆU BẢN ĐỒ (OSM)
-# Danh sách các phường/quận cần tải
+# ======================================================
+# 1. CẤU HÌNH: CHỈ TẢI QUẬN THANH XUÂN
+# ======================================================
 
 places = [
     "Quận Thanh Xuân, Hà Nội, Việt Nam",
@@ -20,131 +21,94 @@ places = [
     "Phường Kim Giang, Hà Nội, Việt Nam"
 ]
 
-# Lấy polygon của từng khu vực
+print("⏳ Đang tải dữ liệu bản đồ... (Quá trình này mất khoảng 1-2 phút)")
+
 polygons = []
 for p in places:
     try:
         gdf = ox.geocode_to_gdf(p)
         polygons.append(gdf.geometry.iloc[0])
-    except:
-        pass
+        print(f" - ✅ Đã tải xong: {p}")
+    except Exception as e:
+        print(f" - ⚠️ Không tải được: {p} ({e})")
 
-# Hợp nhất tất cả polygon thành 1 vùng
-combined_polygon = unary_union(polygons)
+if not polygons:
+    print("❌ LỖI: Không tải được bất kỳ khu vực nào.")
+    exit()
 
-# Tạo đồ thị đường đi (graph) từ polygon
-G = ox.graph_from_polygon(combined_polygon, network_type="drive", simplify=True)
-G_original = G.copy()  # Lưu bản gốc để tham chiếu độ dài
+try:
+    combined_polygon = unary_union(polygons)
+    print("⏳ Đang xây dựng đồ thị giao thông...")
+    
+    # Tạo đồ thị
+    G = ox.graph_from_polygon(combined_polygon, network_type="drive", simplify=True)
+    
+    # XỬ LÝ LIÊN THÔNG (Tránh lỗi không tìm thấy đường)
+    if len(G) > 0:
+        largest_cc = max(nx.strongly_connected_components(G), key=len)
+        G = G.subgraph(largest_cc).copy()
+    
+    G_original = G.copy()
+    print(f"✅ Bản đồ sẵn sàng! {len(G.nodes)} nút, {len(G.edges)} cạnh.")
 
-# 2. THIẾT LẬP TỐC ĐỘ MẶC ĐỊNH
+except Exception as e:
+    print(f"❌ LỖI KHỞI TẠO: {e}")
+    G = nx.MultiDiGraph()
+    combined_polygon = None
+
+
+# ======================================================
+# 2. CẤU HÌNH TỐC ĐỘ & TRẠNG THÁI
+# ======================================================
 
 street_speed = {
-    'motorway': 80, 'trunk': 70, 'primary': 60,
-    'secondary': 50, 'tertiary': 40,
-    'residential': 30, 'service': 20,
-    'unclassified': 25, 'living_street': 20,
-    'footway': 5, 'path': 5
+    'motorway': 60, 'trunk': 50, 'primary': 40, 'secondary': 35, 
+    'tertiary': 30, 'residential': 25, 'service': 20, 'unclassified': 25
 }
 
-# Hệ số vận tốc theo phương tiện
 vehicle_speed_factor = {
-    "car": 1.0,
-    "motorbike": 0.8,
-    "bicycle": 0.4,
-    "foot": 0.2
+    "car": 1.0, "motorbike": 0.9, "bicycle": 0.5, "foot": 0.2
 }
 
-# Lưu các tuyến bị cấm hoặc tắc
 banned_edges = set()
 traffic_factor = {}
 
+# ======================================================
+# 3. HELPER FUNCTIONS
+# ======================================================
 
-# 3. HÀM HEURISTIC CHO A* (dựa vào thời gian)
+def heuristic_time(n1, n2, max_speed=60):
+    try:
+        x1, y1 = G.nodes[n1]["x"], G.nodes[n1]["y"]
+        x2, y2 = G.nodes[n2]["x"], G.nodes[n2]["y"]
+        # Khoảng cách Euclide xấp xỉ tại Hà Nội (1 độ ~ 111km)
+        dist = math.sqrt((x1-x2)**2 + (y1-y2)**2) * 111000 
+        return dist / (max_speed * 1000 / 3600)
+    except:
+        return 0
 
-def heuristic_time(n1, n2, vehicle_speed):
-    # Khoảng cách địa lý giữa 2 node
-    lat1, lon1 = G.nodes[n1]["y"], G.nodes[n1]["x"]
-    lat2, lon2 = G.nodes[n2]["y"], G.nodes[n2]["x"]
-
-    # Công thức Haversine
-    R = 6371000
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = (math.sin(dlat/2)**2 +
-         math.cos(math.radians(lat1)) *
-         math.cos(math.radians(lat2)) *
-         math.sin(dlon/2)**2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    dist = R * c
-
-    # Trả về thời gian ước lượng (giây)
-    return dist / (vehicle_speed * 1000 / 3600)
-
-
-# 4. CẬP NHẬT TRỌNG SỐ CẠNH (theo phương tiện, tắc, cấm)
-
-def update_edge_weights(vehicle="car"):
+def update_weights(vehicle):
     coef = vehicle_speed_factor.get(vehicle, 1.0)
     for u, v, k, data in G.edges(keys=True, data=True):
-        edge = (u, v, k)
-        # Cấm đường → trọng số vô hạn
-        if edge in banned_edges:
+        if (u, v, k) in banned_edges:
             data["weight"] = float("inf")
             continue
+        
+        hw = data.get("highway", "residential")
+        if isinstance(hw, list): hw = hw[0]
+        base_speed = street_speed.get(hw, 25)
+        
+        length = G_original.edges[u, v, k].get("length", 50)
+        tf = traffic_factor.get((u, v, k), 1.0)
+        real_speed = base_speed * coef
+        if real_speed <= 0: real_speed = 5
+        
+        # Trọng số = Thời gian (giây)
+        data["weight"] = (length / (real_speed * 1000 / 3600)) * tf
 
-        highway = data.get("highway", "residential")
-        if isinstance(highway, list):
-            highway = highway[0]
-        base_speed = street_speed.get(highway, 30)
-        speed = base_speed * coef
-        length = G_original.edges[u, v, k].get("length", 1)
-        factor = traffic_factor.get(edge, 1.0)
-        data["weight"] = (length / (speed * 1000 / 3600)) * factor
-
-
-# 5. HÀM XÂY DỰNG ĐƯỜNG CONG (geometry) CHUẨN
-
-def build_route_geometry(route):
-    final_coords = []
-    for u, v in zip(route[:-1], route[1:]):
-        edge_data = G.get_edge_data(u, v, 0)
-        if "geometry" in edge_data:
-            xs, ys = edge_data["geometry"].xy
-            segment = list(zip(ys, xs))  # (lat, lng)
-            final_coords.extend(segment)
-        else:
-            final_coords.append((G.nodes[u]["y"], G.nodes[u]["x"]))
-            final_coords.append((G.nodes[v]["y"], G.nodes[v]["x"]))
-    return final_coords
-
-
-# 6. HÀM TÌM ĐƯỜNG (A* hoặc ngắn nhất)
-
-def find_route(start, end, vehicle, mode):
-    update_edge_weights(vehicle)
-    orig = ox.distance.nearest_nodes(G, start["lng"], start["lat"])
-    dest = ox.distance.nearest_nodes(G, end["lng"], end["lat"])
-
-    try:
-        if mode == "shortest":
-            route = nx.shortest_path(G, orig, dest, weight="length")
-        else:  # fastest
-            route = nx.astar_path(
-                G, orig, dest,
-                heuristic=lambda n1, n2: heuristic_time(n1, n2, 50),
-                weight="weight"
-            )
-    except:
-        return {"error": "Không tìm được đường đi!"}
-
-    coords = build_route_geometry(route)
-    total_time = 0
-    for u, v in zip(route[:-1], route[1:]):
-        data = G.get_edge_data(u, v, 0)
-        total_time += data.get("weight", data.get("length",0)/(50*1000/3600))
-    return {"coords": coords, "time": round(total_time,1), "mode": mode}
-
-# 🔹 7. ROUTE API
+# ======================================================
+# 4. API ROUTES
+# ======================================================
 
 @app.route("/")
 def index():
@@ -152,66 +116,134 @@ def index():
 
 @app.route("/boundary")
 def boundary():
-    coords = list(combined_polygon.exterior.coords)
-    return jsonify([[lat, lng] for lng, lat in coords])
+    if combined_polygon is None: return jsonify([])
+    try:
+        poly = combined_polygon
+        if poly.geom_type == 'MultiPolygon': 
+            poly = poly.convex_hull
+        return jsonify([[lat, lng] for lng, lat in list(poly.exterior.coords)])
+    except:
+        return jsonify([])
 
 @app.route("/find-route-by-click", methods=["POST"])
-def find_by_click():
-    data = request.get_json()
-    return jsonify(find_route(
-        data["point1"], data["point2"],
-        data.get("vehicle","car"),
-        data.get("mode","fastest")
-    ))
+def find_route_click():
+    try:
+        data = request.json
+        p1 = data.get("point1")
+        p2 = data.get("point2")
+        vehicle = data.get("vehicle", "car")
+        mode = data.get("mode", "fastest")
 
-@app.route("/find-route-by-text", methods=["POST"])
-def find_by_text():
-    data = request.get_json()
-    lat1, lng1 = ox.geocode(data["place1"])
-    lat2, lng2 = ox.geocode(data["place2"])
-    start = {"lat":lat1,"lng":lng1}
-    end = {"lat":lat2,"lng":lng2}
-    return jsonify(find_route(
-        start, end,
-        data.get("vehicle","car"),
-        data.get("mode","fastest")
-    ))
+        if not p1 or not p2: return jsonify({"error": "Thiếu thông tin điểm đi/đến"})
 
+        # 1. Cập nhật trọng số
+        update_weights(vehicle)
 
-# 8. CẬP NHẬT CẤM / TẮC ĐƯỜNG
+        # 2. Tìm node gần nhất
+        try:
+            orig = ox.nearest_nodes(G, p1["lng"], p1["lat"])
+            dest = ox.nearest_nodes(G, p2["lng"], p2["lat"])
+        except:
+            return jsonify({"error": "Điểm chọn nằm ngoài vùng bản đồ!"})
 
+        if orig == dest: return jsonify({"error": "Điểm đi và đến quá gần nhau!"})
+
+        # 3. Chạy thuật toán
+        try:
+            if mode == "shortest":
+                path = nx.shortest_path(G, orig, dest, weight="length")
+            else:
+                path = nx.astar_path(G, orig, dest, heuristic=lambda u,v: heuristic_time(u,v), weight="weight")
+        except nx.NetworkXNoPath:
+            return jsonify({"error": "Không tìm thấy đường đi (Khu vực bị ngăn cách)."})
+        
+        # 4. Xây dựng tọa độ chi tiết (Geometry) - SỬA ĐỂ ĐƯỜNG CONG MỀM MẠI
+        coords = []
+        total_time = 0
+        total_dist = 0
+        
+        for i in range(len(path)-1):
+            u, v = path[i], path[i+1]
+            data = G.get_edge_data(u, v)[0] # Lấy cạnh tốt nhất
+            
+            w = data.get("weight", 0)
+            if w != float("inf"): total_time += w
+            total_dist += data.get("length", 0)
+            
+            # --- QUAN TRỌNG: LẤY GEOMETRY THAY VÌ NỐI THẲNG ---
+            if "geometry" in data:
+                xs, ys = data["geometry"].xy
+                # Đảo ngược (x,y) -> (lat,lng) cho Leaflet
+                segment_coords = [[y, x] for x, y in zip(xs, ys)]
+                coords.extend(segment_coords)
+            else:
+                # Nếu đường thẳng, lấy điểm cuối
+                coords.append([G.nodes[v]["y"], G.nodes[v]["x"]])
+        
+        # Thêm điểm đầu/cuối user click
+        coords.insert(0, [p1["lat"], p1["lng"]])
+        coords.append([p2["lat"], p2["lng"]])
+
+        return jsonify({
+            "coords": coords,
+            "time": round(total_time / 60, 2),
+            "distance": round(total_dist / 1000, 2),
+            "mode": mode,
+            "vehicle": vehicle
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": f"Lỗi Server: {str(e)}"})
+
+# --- ADMIN API ---
 @app.route("/ban-route", methods=["POST"])
-def ban_route_api():
-    street = request.json["street"].lower()
-    for u,v,k,data in G.edges(keys=True, data=True):
-        name = data.get("name","")
-        if isinstance(name,list):
-            name = " ".join(name)
-        if street in str(name).lower():
-            banned_edges.add((u,v,k))
-    return jsonify({"message":"Đã cấm thành công!"})
+def ban_route():
+    try:
+        street = request.json.get("street", "").lower()
+        if not street: return jsonify({"error": "Chưa nhập tên đường"})
+        count = 0
+        viz_routes = []
+        for u, v, k, data in G.edges(keys=True, data=True):
+            names = data.get('name', [])
+            if not isinstance(names, list): names = [names]
+            if any(street in str(n).lower() for n in names):
+                banned_edges.add((u, v, k))
+                count += 1
+                if "geometry" in data:
+                    xs, ys = data["geometry"].xy
+                    viz_routes.append([[y, x] for x, y in zip(xs, ys)])
+                else:
+                    n_u, n_v = G.nodes[u], G.nodes[v]
+                    viz_routes.append([[n_u['y'], n_u['x']], [n_v['y'], n_v['x']]])
+        if count == 0: return jsonify({"message": "Không tìm thấy đường!", "status": "error"})
+        return jsonify({"message": f"Đã cấm {count} đoạn đường!", "routes": viz_routes})
+    except Exception as e: return jsonify({"error": str(e)})
 
 @app.route("/change-weight", methods=["POST"])
-def change_weight_api():
-    street = request.json["street"].lower()
-    level = int(request.json["level"])
-    factor = [1.0,1.5,2.0,3.0][level]
-    for u,v,k,data in G.edges(keys=True,data=True):
-        name = data.get("name","")
-        if isinstance(name,list):
-            name = " ".join(name)
-        if street in str(name).lower():
-            traffic_factor[(u,v,k)] = factor
-    return jsonify({"message":"Đã cập nhật tắc đường!"})
+def change_weight():
+    try:
+        street = request.json.get("street", "").lower()
+        level = int(request.json.get("level", 1))
+        factor = {1:1.5, 2:3.0, 3:10.0}.get(level, 1.0)
+        count = 0
+        for u, v, k, data in G.edges(keys=True, data=True):
+            names = data.get('name', [])
+            if not isinstance(names, list): names = [names]
+            if any(street in str(n).lower() for n in names):
+                traffic_factor[(u, v, k)] = factor
+                count += 1
+        return jsonify({"message": f"Đã báo tắc {count} đoạn đường!"})
+    except Exception as e: return jsonify({"error": str(e)})
 
 @app.route("/reset", methods=["POST"])
-def reset_api():
-    banned_edges.clear()
-    traffic_factor.clear()
-    return jsonify({"message":"Đã reset!"})
+def reset():
+    banned_edges.clear(); traffic_factor.clear()
+    return jsonify({"message": "Đã Reset trạng thái giao thông!"})
 
-
-#  9. RUN SERVER
+@app.route("/find-route-by-text", methods=["POST"])
+def find_route_text():
+    return jsonify({"error": "Vui lòng sử dụng tính năng Click trên bản đồ!"})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

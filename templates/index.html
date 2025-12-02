@@ -1,81 +1,258 @@
 <!DOCTYPE html>
-<<<<<<< HEAD
 <html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <title>Ứng dụng tìm đường thông minh</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-    #map { height: 600px; width: 100%; margin-top: 10px; }
-    .control-panel {
-      padding: 10px; background: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;
-    }
-    button, select, input {
-      padding: 6px 10px; border-radius: 5px; border: 1px solid #ccc;
-    }
-  </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Dẫn Đường Thông Minh A*</title>
+    
+    <!-- LEAFLET CSS & FONT AWESOME -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* CSS CHUNG */
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; overflow: hidden; }
+        
+        /* SIDEBAR */
+        #sidebar { width: 320px; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 2000; display: flex; flex-direction: column; position: relative; }
+        .header { background: #2c3e50; color: white; padding: 15px; text-align: center; }
+        .header h2 { margin: 0; font-size: 1.2rem; }
+        .content { padding: 15px; flex: 1; overflow-y: auto; }
+        
+        /* RESULT BOX */
+        #result-box {
+            background: #e8f5e9; padding: 15px; border-radius: 5px; 
+            border-left: 5px solid #27ae60; margin-bottom: 15px; display: none;
+        }
+        #result-box p { margin: 5px 0; color: #2e7d32; font-size: 0.95rem; }
+        #result-box b { font-size: 1.1rem; }
+
+        /* INPUTS */
+        .group { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 5px; color: #555; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        /* BUTTONS */
+        .btn-row { display: flex; gap: 5px; }
+        button { flex: 1; padding: 10px; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-blue { background: #3498db; } .btn-blue:hover { background: #2980b9; }
+        .btn-red { background: #e74c3c; } .btn-red:hover { background: #c0392b; }
+        .btn-orange { background: #f39c12; } .btn-orange:hover { background: #d35400; }
+        .btn-gray { background: #95a5a6; } .btn-gray:hover { background: #7f8c8d; }
+
+        /* MAP */
+        #main { flex: 1; position: relative; }
+        #map { width: 100%; height: 100%; }
+
+        /* CUSTOM MARKER ICONS */
+        .custom-icon {
+            text-align: center;
+            line-height: 32px;
+        }
+        .start-icon i {
+            color: #2ecc71; /* Xanh lá */
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+        }
+        .end-icon i {
+            color: #e74c3c; /* Đỏ */
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+        }
+
+        /* LOADING */
+        #loading {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8); z-index: 3000;
+            display: none; justify-content: center; align-items: center; flex-direction: column;
+        }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
-  <div class="control-panel">
-    <input id="startPlace" placeholder="Điểm bắt đầu" />
-    <input id="endPlace" placeholder="Điểm kết thúc" />
-    <select id="vehicleSelect">
-      <option value="car">🚗 Ô tô</option>
-      <option value="motorbike">🏍 Xe máy</option>
-      <option value="bicycle">🚲 Xe đạp</option>
-      <option value="foot">🚶‍♂️ Đi bộ</option>
-    </select>
-    <button id="findByTextBtn">Tìm (text)</button>
-    <button id="findRouteBtn">Tìm (click)</button>
-    <button id="banRouteBtn">Cấm đường</button>
-    <button id="changeWeightBtn">Tắc đường</button>
-    <button id="resetBtn">Reset</button>
-  </div>
 
-  <div id="map"></div>
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Đang xử lý...</p>
+    </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script src="/static/scripts.js"></script>
-=======
-<html>
-<head>
-<meta charset="utf-8">
-<title>Tìm đường A*</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-<button id="adminBtn">☰</button>
-<div id="sidebar">
-<h3>Chức năng</h3>
-<input id="startPlace" placeholder="Điểm bắt đầu">
-<input id="endPlace" placeholder="Điểm kết thúc">
-<select id="vehicleSelect">
-<option value="car">Ô tô</option>
-<option value="motorbike">Xe máy</option>
-<option value="bicycle">Xe đạp</option>
-<option value="foot">Đi bộ</option>
-</select>
-<select id="modeSelect">
-<option value="fastest">Nhanh nhất</option>
-<option value="shortest">Ngắn nhất</option>
-</select>
-<button id="findByTextBtn">Tìm đường (Text)</button>
-<div class="section">
-<button id="banRouteBtn">Cấm đường</button>
-<button id="changeWeightBtn">Tắc đường</button>
-<button id="resetBtn">Reset</button>
-</div>
-</div>
-<div id="main">
-<div id="map"></div>
-<p id="travelTime"></p>
-<center><button id="findRouteBtn">Tìm đường (Click)</button></center>
-</div>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="{{ url_for('static','main.js') }}"></script>
->>>>>>> 455ef6a58c57ceb283d264c610854ae1b2ab85b3
+    <div id="sidebar">
+        <div class="header">
+            <h2>Route Master A*</h2>
+            <small>Thanh Xuan District</small>
+        </div>
+        
+        <div class="content">
+            <!-- KẾT QUẢ -->
+            <div id="result-box">
+                <p><i class="fas fa-clock"></i> Thời gian: <b id="timeDisplay">--</b> phút</p>
+                <p><i class="fas fa-road"></i> Quãng đường: <b id="distDisplay">--</b> km</p>
+                <p><i class="fas fa-info-circle"></i> Chế độ: <span id="modeDisplay">--</span></p>
+            </div>
+
+            <!-- FORM TÌM KIẾM -->
+            <div class="group">
+                <label>📍 Điểm đi / Điểm đến:</label>
+                <input id="startPlace" placeholder="Click trên bản đồ..." readonly>
+                <input id="endPlace" placeholder="Click trên bản đồ..." readonly>
+                
+                <label>🛵 Phương tiện & Thuật toán:</label>
+                <div class="btn-row">
+                    <select id="vehicleSelect">
+                        <option value="car">Ô tô</option>
+                        <option value="motorbike">Xe máy</option>
+                        <option value="bicycle">Xe đạp</option>
+                        <option value="foot">Đi bộ</option>
+                    </select>
+                    <select id="modeSelect">
+                        <option value="fastest">Nhanh nhất (A*)</option>
+                        <option value="shortest">Ngắn nhất (Dijkstra)</option>
+                    </select>
+                </div>
+                <button class="btn-gray" onclick="clearMap()" style="width: 100%; margin-top: 5px;">Xóa & Chọn lại</button>
+            </div>
+
+            <!-- FORM ADMIN -->
+            <div class="group">
+                <label>🚦 Quản lý giao thông (Admin):</label>
+                <input id="streetInput" placeholder="Nhập tên đường (VD: nguyen trai)...">
+                <label>Mức độ tắc:</label>
+                <input type="range" id="trafficLevel" min="1" max="3" value="1">
+                <div style="text-align: center; color: #e67e22; font-weight: bold;">Cấp độ: <span id="levelVal">1</span></div>
+                <div class="btn-row" style="margin-top: 10px;">
+                    <button class="btn-orange" onclick="changeWeight()">Báo Tắc</button>
+                    <button class="btn-red" onclick="banRoute()">Cấm Đường</button>
+                </div>
+                <button class="btn-blue" onclick="resetGraph()" style="margin-top: 5px; width: 100%;">Reset Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main">
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([21.000, 105.820], 14); 
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+
+        var points = [];
+        var markers = [];
+        var routeLayer = null;
+        var banLayers = [];
+
+        function showLoading(show) { document.getElementById('loading').style.display = show ? 'flex' : 'none'; }
+
+        // Load Boundary
+        fetch('/boundary').then(r=>r.json()).then(coords => {
+            if(coords.length) L.polygon(coords, {color:'#555', fillOpacity:0.05, dashArray:'5,5'}).addTo(map);
+        }).catch(err => console.warn("Chưa chạy server Python:", err));
+
+        // XỬ LÝ CLICK
+        map.on('click', function(e) {
+            if(routeLayer || points.length >= 2) clearMap();
+
+            points.push(e.latlng);
+            
+            // TẠO CUSTOM MARKER (MŨI TÊN / CỜ)
+            var iconHtml, className;
+            if (points.length === 1) {
+                // Điểm đi: Mũi tên chỉ xuống
+                iconHtml = '<i class="fas fa-map-marker-alt fa-3x"></i>';
+                className = 'custom-icon start-icon';
+            } else {
+                // Điểm đến: Cờ đích
+                iconHtml = '<i class="fas fa-flag-checkered fa-2x"></i>';
+                className = 'custom-icon end-icon';
+            }
+
+            var customIcon = L.divIcon({
+                html: iconHtml,
+                className: className,
+                iconSize: [32, 42],
+                iconAnchor: [16, 42] // Căn giữa đáy
+            });
+            
+            var mk = L.marker(e.latlng, {icon: customIcon}).addTo(map);
+            markers.push(mk);
+
+            var coordText = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
+            if(points.length === 1) document.getElementById('startPlace').value = coordText;
+            else document.getElementById('endPlace').value = coordText;
+
+            if(points.length === 2) {
+                var vehicle = document.getElementById('vehicleSelect').value;
+                var mode = document.getElementById('modeSelect').value;
+                
+                showLoading(true);
+                fetch('/find-route-by-click', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ point1: points[0], point2: points[1], vehicle: vehicle, mode: mode })
+                })
+                .then(r => r.json())
+                .then(res => {
+                    showLoading(false);
+                    if(res.error) {
+                        alert(res.error);
+                        clearMap();
+                    } else {
+                        routeLayer = L.polyline(res.coords, {color: 'blue', weight: 6, opacity: 0.8}).addTo(map);
+                        map.fitBounds(routeLayer.getBounds());
+                        
+                        document.getElementById('result-box').style.display = 'block';
+                        document.getElementById('timeDisplay').innerText = res.time;
+                        document.getElementById('distDisplay').innerText = res.distance;
+                        document.getElementById('modeDisplay').innerText = res.mode === 'fastest' ? "Nhanh nhất" : "Ngắn nhất";
+                    }
+                })
+                .catch(e => { showLoading(false); alert("Lỗi kết nối Server!"); console.error(e); });
+            }
+        });
+
+        window.clearMap = function() {
+            if(routeLayer) map.removeLayer(routeLayer);
+            routeLayer = null;
+            markers.forEach(m => map.removeLayer(m));
+            markers = []; points = [];
+            document.getElementById('startPlace').value = "";
+            document.getElementById('endPlace').value = "";
+            document.getElementById('result-box').style.display = 'none';
+        }
+
+        window.banRoute = function() {
+            var s = document.getElementById('streetInput').value;
+            if(!s) return alert("Nhập tên đường!");
+            showLoading(true);
+            fetch('/ban-route', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({street:s})})
+            .then(r=>r.json()).then(d=>{
+                showLoading(false);
+                alert(d.message);
+                if(d.routes) d.routes.forEach(l => banLayers.push(L.polyline(l, {color:'red', weight:4}).addTo(map)));
+            });
+        }
+
+        window.changeWeight = function() {
+            var s = document.getElementById('streetInput').value;
+            var l = document.getElementById('trafficLevel').value;
+            if(!s) return alert("Nhập tên đường!");
+            showLoading(true);
+            fetch('/change-weight', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({street:s, level:l})})
+            .then(r=>r.json()).then(d=>{ showLoading(false); alert(d.message); });
+        }
+
+        window.resetGraph = function() {
+            if(!confirm("Reset dữ liệu?")) return;
+            fetch('/reset', {method:'POST'}).then(r=>r.json()).then(d=>{
+                alert(d.message);
+                banLayers.forEach(l => map.removeLayer(l));
+                clearMap();
+            });
+        }
+
+        document.getElementById('trafficLevel').oninput = function() {
+            document.getElementById('levelVal').innerText = this.value;
+        }
+    </script>
 </body>
 </html>
