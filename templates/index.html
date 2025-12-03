@@ -10,16 +10,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* CSS CHUNG */
         body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; overflow: hidden; }
         
-        /* SIDEBAR */
         #sidebar { width: 320px; background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 2000; display: flex; flex-direction: column; position: relative; }
         .header { background: #2c3e50; color: white; padding: 15px; text-align: center; }
         .header h2 { margin: 0; font-size: 1.2rem; }
         .content { padding: 15px; flex: 1; overflow-y: auto; }
         
-        /* RESULT BOX */
         #result-box {
             background: #e8f5e9; padding: 15px; border-radius: 5px; 
             border-left: 5px solid #27ae60; margin-bottom: 15px; display: none;
@@ -27,12 +24,13 @@
         #result-box p { margin: 5px 0; color: #2e7d32; font-size: 0.95rem; }
         #result-box b { font-size: 1.1rem; }
 
-        /* INPUTS */
         .group { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 5px; color: #555; }
-        input, select { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         
-        /* BUTTONS */
+        /* Input cho phép nhập liệu */
+        input, select { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        input:focus { border-color: #3498db; outline: none; }
+        
         .btn-row { display: flex; gap: 5px; }
         button { flex: 1; padding: 10px; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; }
         .btn-blue { background: #3498db; } .btn-blue:hover { background: #2980b9; }
@@ -40,25 +38,13 @@
         .btn-orange { background: #f39c12; } .btn-orange:hover { background: #d35400; }
         .btn-gray { background: #95a5a6; } .btn-gray:hover { background: #7f8c8d; }
 
-        /* MAP */
         #main { flex: 1; position: relative; }
         #map { width: 100%; height: 100%; }
 
-        /* CUSTOM MARKER ICONS */
-        .custom-icon {
-            text-align: center;
-            line-height: 32px;
-        }
-        .start-icon i {
-            color: #2ecc71; /* Xanh lá */
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
-        }
-        .end-icon i {
-            color: #e74c3c; /* Đỏ */
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
-        }
+        .custom-icon { text-align: center; line-height: 32px; }
+        .start-icon i { color: #2ecc71; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5)); }
+        .end-icon i { color: #e74c3c; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5)); }
 
-        /* LOADING */
         #loading {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255,255,255,0.8); z-index: 3000;
@@ -82,18 +68,17 @@
         </div>
         
         <div class="content">
-            <!-- KẾT QUẢ -->
             <div id="result-box">
                 <p><i class="fas fa-clock"></i> Thời gian: <b id="timeDisplay">--</b> phút</p>
                 <p><i class="fas fa-road"></i> Quãng đường: <b id="distDisplay">--</b> km</p>
                 <p><i class="fas fa-info-circle"></i> Chế độ: <span id="modeDisplay">--</span></p>
             </div>
 
-            <!-- FORM TÌM KIẾM -->
             <div class="group">
-                <label>📍 Điểm đi / Điểm đến:</label>
-                <input id="startPlace" placeholder="Click trên bản đồ..." readonly>
-                <input id="endPlace" placeholder="Click trên bản đồ..." readonly>
+                <label>📍 Nhập địa chỉ hoặc Click bản đồ:</label>
+                <!-- ĐÃ XÓA READONLY: BẠN CÓ THỂ GÕ VÀO ĐÂY -->
+                <input id="startPlace" placeholder="VD: Royal City...">
+                <input id="endPlace" placeholder="VD: 335 Nguyen Trai...">
                 
                 <label>🛵 Phương tiện & Thuật toán:</label>
                 <div class="btn-row">
@@ -108,10 +93,12 @@
                         <option value="shortest">Ngắn nhất (Dijkstra)</option>
                     </select>
                 </div>
-                <button class="btn-gray" onclick="clearMap()" style="width: 100%; margin-top: 5px;">Xóa & Chọn lại</button>
+                <div class="btn-row" style="margin-top: 5px;">
+                    <button class="btn-blue" id="findByTextBtn">Tìm (Text)</button>
+                    <button class="btn-gray" onclick="clearMap()">Xóa</button>
+                </div>
             </div>
 
-            <!-- FORM ADMIN -->
             <div class="group">
                 <label>🚦 Quản lý giao thông (Admin):</label>
                 <input id="streetInput" placeholder="Nhập tên đường (VD: nguyen trai)...">
@@ -146,35 +133,41 @@
         // Load Boundary
         fetch('/boundary').then(r=>r.json()).then(coords => {
             if(coords.length) L.polygon(coords, {color:'#555', fillOpacity:0.05, dashArray:'5,5'}).addTo(map);
-        }).catch(err => console.warn("Chưa chạy server Python:", err));
+        }).catch(err => console.warn("Lỗi tải boundary:", err));
 
-        // XỬ LÝ CLICK
+        // HÀM VẼ KẾT QUẢ CHUNG
+        function drawResult(res) {
+            clearMap(true); // Xóa cũ nhưng giữ text nếu cần
+
+            routeLayer = L.polyline(res.coords, {color: 'blue', weight: 6, opacity: 0.8}).addTo(map);
+            map.fitBounds(routeLayer.getBounds());
+
+            var startIcon = L.divIcon({html: '<i class="fas fa-map-marker-alt fa-3x"></i>', className: 'custom-icon start-icon', iconSize: [32, 42], iconAnchor: [16, 42]});
+            var endIcon = L.divIcon({html: '<i class="fas fa-flag-checkered fa-2x"></i>', className: 'custom-icon end-icon', iconSize: [32, 42], iconAnchor: [16, 42]});
+
+            // Nếu tìm bằng Text, server trả về start_point/end_point. Nếu Click, ta lấy từ points[]
+            var p1 = res.start_point || points[0];
+            var p2 = res.end_point || points[1];
+
+            markers.push(L.marker([p1.lat, p1.lng], {icon: startIcon}).addTo(map));
+            markers.push(L.marker([p2.lat, p2.lng], {icon: endIcon}).addTo(map));
+
+            document.getElementById('result-box').style.display = 'block';
+            document.getElementById('timeDisplay').innerText = res.time;
+            document.getElementById('distDisplay').innerText = res.distance;
+            document.getElementById('modeDisplay').innerText = res.mode === 'fastest' ? "Nhanh nhất" : "Ngắn nhất";
+        }
+
+        // 1. TÌM BẰNG CLICK
         map.on('click', function(e) {
             if(routeLayer || points.length >= 2) clearMap();
 
             points.push(e.latlng);
             
-            // TẠO CUSTOM MARKER (MŨI TÊN / CỜ)
-            var iconHtml, className;
-            if (points.length === 1) {
-                // Điểm đi: Mũi tên chỉ xuống
-                iconHtml = '<i class="fas fa-map-marker-alt fa-3x"></i>';
-                className = 'custom-icon start-icon';
-            } else {
-                // Điểm đến: Cờ đích
-                iconHtml = '<i class="fas fa-flag-checkered fa-2x"></i>';
-                className = 'custom-icon end-icon';
-            }
-
-            var customIcon = L.divIcon({
-                html: iconHtml,
-                className: className,
-                iconSize: [32, 42],
-                iconAnchor: [16, 42] // Căn giữa đáy
-            });
-            
-            var mk = L.marker(e.latlng, {icon: customIcon}).addTo(map);
-            markers.push(mk);
+            var iconHtml = points.length === 1 ? '<i class="fas fa-map-marker-alt fa-3x"></i>' : '<i class="fas fa-flag-checkered fa-2x"></i>';
+            var className = points.length === 1 ? 'custom-icon start-icon' : 'custom-icon end-icon';
+            var customIcon = L.divIcon({html: iconHtml, className: className, iconSize: [32, 42], iconAnchor: [16, 42]});
+            markers.push(L.marker(e.latlng, {icon: customIcon}).addTo(map));
 
             var coordText = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
             if(points.length === 1) document.getElementById('startPlace').value = coordText;
@@ -183,40 +176,56 @@
             if(points.length === 2) {
                 var vehicle = document.getElementById('vehicleSelect').value;
                 var mode = document.getElementById('modeSelect').value;
-                
                 showLoading(true);
+                
                 fetch('/find-route-by-click', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ point1: points[0], point2: points[1], vehicle: vehicle, mode: mode })
                 })
                 .then(r => r.json())
                 .then(res => {
                     showLoading(false);
-                    if(res.error) {
-                        alert(res.error);
-                        clearMap();
-                    } else {
-                        routeLayer = L.polyline(res.coords, {color: 'blue', weight: 6, opacity: 0.8}).addTo(map);
-                        map.fitBounds(routeLayer.getBounds());
-                        
-                        document.getElementById('result-box').style.display = 'block';
-                        document.getElementById('timeDisplay').innerText = res.time;
-                        document.getElementById('distDisplay').innerText = res.distance;
-                        document.getElementById('modeDisplay').innerText = res.mode === 'fastest' ? "Nhanh nhất" : "Ngắn nhất";
-                    }
+                    if(res.error) { alert(res.error); clearMap(); } 
+                    else { drawResult(res); }
                 })
-                .catch(e => { showLoading(false); alert("Lỗi kết nối Server!"); console.error(e); });
+                .catch(e => { showLoading(false); alert("Lỗi kết nối Server!"); });
             }
         });
 
-        window.clearMap = function() {
+        // 2. TÌM BẰNG TEXT (ĐÃ HOẠT ĐỘNG)
+        document.getElementById('findByTextBtn').onclick = function() {
+            var place1 = document.getElementById('startPlace').value;
+            var place2 = document.getElementById('endPlace').value;
+            var vehicle = document.getElementById('vehicleSelect').value;
+            var mode = document.getElementById('modeSelect').value;
+
+            if(!place1 || !place2) return alert("Vui lòng nhập tên 2 địa điểm!");
+
+            showLoading(true);
+            fetch('/find-route-by-text', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ place1: place1, place2: place2, vehicle: vehicle, mode: mode })
+            })
+            .then(r => r.json())
+            .then(res => {
+                showLoading(false);
+                if(res.error) { alert(res.error); }
+                else { drawResult(res); } // Gọi chung hàm vẽ
+            })
+            .catch(e => { showLoading(false); alert("Lỗi kết nối Server!"); });
+        };
+
+        // HELPERS
+        window.clearMap = function(keepInput) {
             if(routeLayer) map.removeLayer(routeLayer);
             routeLayer = null;
             markers.forEach(m => map.removeLayer(m));
-            markers = []; points = [];
-            document.getElementById('startPlace').value = "";
-            document.getElementById('endPlace').value = "";
+            markers = []; 
+            if(!keepInput) {
+                points = []; 
+                document.getElementById('startPlace').value = "";
+                document.getElementById('endPlace').value = "";
+            }
             document.getElementById('result-box').style.display = 'none';
         }
 
@@ -226,8 +235,7 @@
             showLoading(true);
             fetch('/ban-route', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({street:s})})
             .then(r=>r.json()).then(d=>{
-                showLoading(false);
-                alert(d.message);
+                showLoading(false); alert(d.message);
                 if(d.routes) d.routes.forEach(l => banLayers.push(L.polyline(l, {color:'red', weight:4}).addTo(map)));
             });
         }
@@ -244,9 +252,7 @@
         window.resetGraph = function() {
             if(!confirm("Reset dữ liệu?")) return;
             fetch('/reset', {method:'POST'}).then(r=>r.json()).then(d=>{
-                alert(d.message);
-                banLayers.forEach(l => map.removeLayer(l));
-                clearMap();
+                alert(d.message); banLayers.forEach(l => map.removeLayer(l)); clearMap();
             });
         }
 
