@@ -1,28 +1,244 @@
+/* --- 1. CẤU HÌNH CƠ BẢN & BIẾN MÀU SẮC --- */
+:root {
+    --primary-bg: #2c3e50;      /* Màu nền sidebar header */
+    --text-color: #333;
+    --blue-btn: #3498db;        /* Nút Tìm kiếm */
+    --blue-hover: #2980b9;
+    --red-btn: #e74c3c;         /* Nút Cấm đường */
+    --red-hover: #c0392b;
+    --orange-btn: #f39c12;      /* Nút Tắc đường */
+    --orange-hover: #d35400;
+    --gray-btn: #95a5a6;        /* Nút phụ */
+    --green-success: #27ae60;   /* Kết quả thành công */
+    --light-gray: #ecf0f1;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100vh;
+    display: flex; /* Bố cục chia đôi: Sidebar - Main */
+    overflow: hidden; /* Ngăn thanh cuộn thừa */
+}
+
+/* --- 2. SIDEBAR (THANH ĐIỀU KHIỂN) --- */
 #sidebar {
-  position: fixed;
-  top: 0;
-  left: -250px;
-  width: 250px;
-  height: 100%;
-  background: #333;
-  color: white;
-  padding: 20px;
-  box-sizing: border-box;
-  transition: transform 0.3s ease;
-  transform: translateX(0);
-  z-index: 1000;
+    width: 340px;
+    height: 100%;
+    background: #fff;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    z-index: 2000; /* Nằm trên bản đồ */
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+    
+    /* Mặc định hiển thị trên Desktop */
+    position: relative; 
+    transform: translateX(0);
 }
 
-#sidebar.appear {
-  transform: translateX(100%);
+.sidebar-header {
+    background-color: var(--primary-bg);
+    color: white;
+    padding: 15px 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.sidebar-header h2 { margin: 0; font-size: 1.3rem; }
+.sidebar-header p { margin: 5px 0 0; font-size: 0.85rem; opacity: 0.8; font-weight: 300; }
+
+.sidebar-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto; /* Cuộn dọc nếu nội dung dài */
 }
 
+/* Các nhóm chức năng */
+.control-group {
+    background: #fff;
+    margin-bottom: 25px;
+    border-bottom: 1px dashed #ccc;
+    padding-bottom: 20px;
+}
+.control-group:last-child { border-bottom: none; }
+
+.control-group h3 {
+    margin-top: 0;
+    font-size: 1rem;
+    color: var(--primary-bg);
+    border-left: 4px solid var(--blue-btn);
+    padding-left: 10px;
+    margin-bottom: 15px;
+}
+
+/* Input & Select */
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+input[type="text"], select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box; /* Đảm bảo padding không làm vỡ layout */
+    font-size: 14px;
+    transition: border 0.3s;
+}
+
+input[type="text"]:focus, select:focus {
+    border-color: var(--blue-btn);
+    outline: none;
+}
+
+/* --- 3. BUTTONS (NÚT BẤM) --- */
+.btn-row {
+    display: flex;
+    gap: 10px; /* Khoảng cách giữa các nút */
+    margin-bottom: 10px;
+}
+
+button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    color: white;
+    font-size: 0.9rem;
+    transition: background 0.2s, transform 0.1s;
+}
+button:active { transform: scale(0.98); }
+
+/* Màu sắc từng loại nút */
+.btn-primary { background-color: var(--blue-btn); }
+.btn-primary:hover { background-color: var(--blue-hover); }
+
+.btn-secondary { background-color: var(--gray-btn); }
+.btn-secondary:hover { background-color: #7f8c8d; }
+
+.btn-warning { background-color: var(--orange-btn); }
+.btn-warning:hover { background-color: var(--orange-hover); }
+
+.btn-danger { background-color: var(--red-btn); }
+.btn-danger:hover { background-color: var(--red-hover); }
+
+.btn-reset {
+    background-color: var(--primary-bg);
+    width: 100%;
+    margin-top: 15px;
+}
+.btn-reset:hover { background-color: #000; }
+
+/* --- 4. CÁC THÀNH PHẦN KHÁC --- */
+
+/* Hộp kết quả (Result Box) */
+#result-box {
+    background-color: #e8f5e9; /* Xanh nhạt */
+    border: 1px solid #c8e6c9;
+    border-left: 5px solid var(--green-success);
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    display: none; /* Mặc định ẩn */
+}
+#result-box p { margin: 8px 0; font-size: 0.95rem; color: #2e7d32; }
+#result-box strong { color: #1b5e20; font-size: 1.1rem; }
+
+/* Thanh trượt mức độ tắc đường */
+.traffic-control {
+    background: #fff8e1; /* Cam nhạt */
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ffe0b2;
+    margin-bottom: 10px;
+}
+.level-indicator {
+    text-align: center;
+    font-weight: bold;
+    color: var(--orange-hover);
+    margin-top: 5px;
+}
+input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+}
+
+/* --- 5. LOADING SPINNER (Màn hình chờ) --- */
+#loading {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255,255,255,0.7);
+    z-index: 9999;
+    display: none; /* Mặc định ẩn */
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+.spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--blue-btn);
+    border-radius: 50%;
+    width: 50px; height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- 6. KHU VỰC BẢN ĐỒ CHÍNH --- */
 #main {
-  margin-left: 0;
-  padding: 20px;
-  transition: margin-left 0.3s ease;
+    flex: 1; /* Chiếm toàn bộ phần còn lại */
+    position: relative;
+    background: #eee;
 }
 
-#main.minimize {
-  margin-left: 250px;
+#map {
+    width: 100%;
+    height: 100%;
+}
+
+/* Nút Toggle cho Mobile (3 gạch ngang) */
+#toggle-sidebar {
+    position: absolute;
+    top: 15px; left: 15px;
+    z-index: 1001; /* Trên bản đồ nhưng dưới các popup */
+    background: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--primary-bg);
+    display: none; /* Ẩn trên desktop */
+}
+
+/* --- 7. RESPONSIVE (GIAO DIỆN ĐIỆN THOẠI) --- */
+@media (max-width: 768px) {
+    /* Hiện nút toggle */
+    #toggle-sidebar { display: block; }
+
+    /* Sidebar ẩn sang trái */
+    #sidebar {
+        position: absolute;
+        height: 100%;
+        transform: translateX(-100%);
+    }
+
+    /* Khi có class .active thì trượt ra */
+    #sidebar.active {
+        transform: translateX(0);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.3);
+    }
 }
