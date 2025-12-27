@@ -1,57 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <title>Route-finding App</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <link rel="stylesheet" href="/static/style.css" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Dẫn Đường Thông Minh A*</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <button style="position: fixed; top: 10px; left: 10px; height: 30px; z-index: 1001" onclick="toggleSidebar()">Admin Mode</button>
 
-  <div id="sidebar">
-    <hr style="margin: 20px 0; border: none" />
+    <button id="toggle-sidebar"><i class="fas fa-bars"></i></button>
 
-    <input style="width: 200px; height: 20px" type="text" id="streetInput" placeholder="Nhập tên đường" />
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <label><input type="radio" name="action" value="change"> Tắc đường</label><br>
-    <label for="volume">Mức độ tắc:</label><br>
-    <input type="range" id="level" min="1" max="3" value="1">
-    <span id="levelValue">1</span>
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <label><input type="radio" name="action" value="ban"> Cấm đường</label><br>
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <button style="width: 100px; display: block; margin: 0 auto" onclick="changeWeight()">Xác nhận</button>
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <button style="width: 100px; display: block; margin: 0 auto" onclick="resetGraph()">Reset</button>
-  </div>
-
-  <div id="main">
-    <div style="height: 500px; margin-top: 20px" id="map"></div>
-
-    <hr style="margin: 10px 0; border: none" />
-
-    <div style="width: fit-content; margin: 0 auto; text-align: center;">
-      <div style="display: flex; gap: 50px; justify-content: center;">
-          <input style="width: 200px" type="text" id="placeInput1" placeholder="Nhập điểm xuất phát" />
-          <input style="width: 200px" type="text" id="placeInput2" placeholder="Nhập điểm đến" />
-      </div>
-      
-      <hr style="margin: 10px 0; border: none" />
-
-      <button style="width: 100px; display: block; margin: 0 auto" onclick="findRoute()">Tìm</button>
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Đang xử lý...</p>
     </div>
-  </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script src="/static/scripts.js"></script>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>Route Master A*</h2>
+            <p>Thanh Xuan District</p>
+        </div>
+        
+        <div class="sidebar-content">
+            <div id="result-box">
+                <p><i class="fas fa-clock"></i> Thời gian: <b id="timeDisplay">--</b> phút</p>
+                <p><i class="fas fa-road"></i> Quãng đường: <b id="distDisplay">--</b> km</p>
+                <p><i class="fas fa-info-circle"></i> Chế độ: <span id="modeDisplay">--</span></p>
+            </div>
+
+            <div class="control-group">
+                <h3><i class="fas fa-map-marked-alt"></i> Tìm Đường</h3>
+                <label>📍 Địa điểm (Click hoặc Nhập):</label>
+                <input id="startPlace" type="text" placeholder="VD: Royal City...">
+                <input id="endPlace" type="text" placeholder="VD: 335 Nguyen Trai...">
+                
+                <label>🛵 Tùy chọn:</label>
+                <div class="btn-row">
+                    <select id="vehicleSelect">
+                        <option value="car">Ô tô</option>
+                        <option value="motorbike">Xe máy</option>
+                        <option value="bicycle">Xe đạp</option>
+                        <option value="foot">Đi bộ</option>
+                    </select>
+                    <select id="modeSelect">
+                        <option value="fastest">Nhanh nhất (A*)</option>
+                        <option value="shortest">Ngắn nhất (Dijkstra)</option>
+                    </select>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-primary" id="findByTextBtn">Tìm (Text)</button>
+                    <button class="btn-secondary" id="findRouteBtn">Hướng dẫn Click</button> 
+                </div>
+                <button class="btn-secondary btn-reset" onclick="clearMap()">Xóa đường vẽ</button>
+            </div>
+
+            <div class="control-group">
+                <h3><i class="fas fa-traffic-light"></i> Quản Lý Giao Thông</h3>
+                <input id="streetInput" type="text" placeholder="Nhập tên đường (VD: nguyen trai)...">
+                
+                <div class="traffic-control">
+                    <label>Mức độ tắc:</label>
+                    <input type="range" id="trafficLevel" min="1" max="3" value="1">
+                    <div class="level-indicator">Cấp độ: <span id="levelValue">1</span></div>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn-warning" id="changeWeightBtn">Báo Tắc</button>
+                    <button class="btn-danger" id="banRouteBtn">Cấm Đường</button>
+                </div>
+                <button class="btn-secondary btn-reset" id="resetBtn">Reset Dữ Liệu</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main">
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
 </html>
